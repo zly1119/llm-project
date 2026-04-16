@@ -1,0 +1,64 @@
+
+                    <!DOCTYPE html>
+                    <html lang="zh-CN">
+                    <head>
+                      <meta charset="UTF-8"/>
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+                      <title>在线教育 · 学科入口</title>
+                      <style>
+                        * { margin:0; padding:0; box-sizing:border-box; }
+                        body {
+                          min-height:100vh;
+                          font-family:'Segoe UI',system-ui,sans-serif;
+                          background:linear-gradient(160deg,#eef2f7 0%,#d9e2ec 50%,#e8eef5 100%);
+                          display:flex; align-items:center; justify-content:center;
+                          padding:1.5rem;
+                        }
+                        .wrap {
+                          max-width:560px; width:100%;
+                          background:rgba(255,255,255,0.88);
+                          backdrop-filter:blur(12px);
+                          border-radius:1.75rem;
+                          padding:2.25rem 2rem;
+                          box-shadow:0 20px 50px -20px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.7);
+                        }
+                        h1 {
+                          font-size:1.45rem; font-weight:700;
+                          background:linear-gradient(135deg,#1e3c72,#2b5c9c);
+                          -webkit-background-clip:text; background-clip:text; color:transparent;
+                          margin-bottom:0.35rem;
+                        }
+                        .sub { color:#5a6e8a; font-size:0.9rem; margin-bottom:1.75rem; line-height:1.5; }
+                        .label { font-size:0.75rem; color:#64748b; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.65rem; }
+                        .cards { display:flex; flex-direction:column; gap:0.75rem; }
+                        a.entry {
+                          display:block; text-decoration:none;
+                          padding:1rem 1.15rem; border-radius:1rem;
+                          border:1px solid rgba(30,136,229,0.35);
+                          background:linear-gradient(135deg,rgba(30,136,229,0.08),rgba(255,255,255,0.9));
+                          color:#1e3c72; font-weight:600; font-size:0.98rem;
+                          transition:transform 0.15s, box-shadow 0.15s;
+                        }
+                        a.entry:hover { transform:translateY(-2px); box-shadow:0 8px 24px -8px rgba(30,136,229,0.35); }
+                        .entry.disabled {
+                          border-color:#e2e8f0; background:#f8fafc; color:#94a3b8;
+                          cursor:not-allowed; font-weight:500;
+                        }
+                        .muted { font-size:0.8rem; color:#94a3b8; margin-top:0.25rem; }
+                        .foot { margin-top:1.5rem; font-size:0.72rem; color:#94a3b8; text-align:center; }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="wrap">
+                        <h1>在线教育学习中心</h1>
+                        <p class="sub">选择一个学科进入智能学伴。</p>
+                        <p class="label">选择学科</p>
+                        <div class="cards">
+                          <a class="entry" href="/app">高等数学 </a>
+                          <div class="entry disabled" title="敬请期待">大学物理<span class="muted">（建设中）</span></div>
+                        </div>
+                        <p class="foot">本地服务 · 知识图谱 + 大模型</p>
+                      </div>
+                    </body>
+                    </html>
+                    

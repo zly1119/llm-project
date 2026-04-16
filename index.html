@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>智能学伴 · 高等数学（问答 + 攻略）</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
+  <style>
+    :root {
+      --bg: linear-gradient(145deg, #eef2f7 0%, #d9e2ec 100%);
+      --card: rgba(255,255,255,0.82);
+      --border: rgba(0,0,0,0.08);
+      --blue: #1e88e5;
+      --blue-dark: #0b5fa0;
+      --text: #1f2937;
+      --muted: #5a6e8a;
+      --radius: 1.25rem;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      padding: 1rem;
+      color: var(--text);
+    }
+    .app {
+      width: 100%;
+      max-width: 920px;
+      display: flex;
+      flex-direction: column;
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      border-radius: 2rem;
+      box-shadow: 0 20px 40px -12px rgba(0,0,0,0.22);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.6);
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.9);
+    }
+    header h1 { font-size: 1.35rem; font-weight: 600; color: #1e3c72; }
+    .mode-switch {
+      display: flex;
+      gap: 0.25rem;
+      background: #f0f2f5;
+      padding: 0.2rem;
+      border-radius: 2rem;
+    }
+    .mode-switch button {
+      border: none;
+      background: transparent;
+      padding: 0.45rem 1rem;
+      border-radius: 2rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .mode-switch button.active {
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    #chatBox {
+      flex: 1;
+      min-height: 48vh;
+      max-height: 58vh;
+      overflow-y: auto;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .message {
+      max-width: 88%;
+      padding: 0.75rem 1.1rem;
+      border-radius: 1.25rem;
+      line-height: 1.55;
+      font-size: 0.95rem;
+      word-break: break-word;
+    }
+    .message.user {
+      align-self: flex-end;
+      background: var(--blue);
+      color: #fff;
+    }
+    .message.assistant {
+      align-self: flex-start;
+      background: #fff;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .message.assistant .md-content :is(h1,h2,h3) { margin: 0.6em 0 0.35em; font-size: 1.05em; }
+    .message.assistant .md-content pre {
+      background: #f8f9fa;
+      padding: 0.5rem 0.65rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+    }
+    .typing {
+      align-self: flex-start;
+      padding: 0.65rem 1rem;
+      background: #fff;
+      border-radius: 1.25rem;
+      border: 1px solid var(--border);
+      display: flex;
+      gap: 5px;
+    }
+    .typing span {
+      width: 7px; height: 7px;
+      background: #9aa6b5;
+      border-radius: 50%;
+      animation: pulse 1.3s ease-in-out infinite;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.15s; }
+    .typing span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.35; transform: scale(0.75); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    /* 攻略引导卡片 */
+    .guide-card {
+      align-self: flex-start;
+      max-width: 92%;
+      background: #eef2ff;
+      border-left: 4px solid var(--blue);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      font-size: 0.92rem;
+    }
+    .guide-card h3 { margin-bottom: 0.5rem; color: #1e3c72; font-size: 1rem; }
+    .guide-section { margin-top: 0.75rem; }
+    .guide-section strong { display: block; margin-bottom: 0.4rem; color: #334155; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .chip {
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      border-radius: 2rem;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .chip:hover { border-color: var(--blue); }
+    .chip.selected {
+      background: #dbeafe;
+      border-color: var(--blue);
+      color: #1e40af;
+    }
+    .chip:disabled { opacity: 0.55; cursor: not-allowed; }
+    .days-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.35rem;
+    }
+    .days-row input[type="number"] {
+      width: 100px;
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .guide-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+    .btn-cancel {
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: #475569;
+      padding: 0.5rem 1.1rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .btn-cancel:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-send-guide {
+      border: none;
+      background: var(--blue);
+      color: #fff;
+      padding: 0.5rem 1.25rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-send-guide:hover { background: var(--blue-dark); }
+    .btn-send-guide:disabled { opacity: 0.55; cursor: not-allowed; }
+    /* 攻略生成状态卡片 */
+    .status-card {
+      align-self: stretch;
+      margin: 0 0.5rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      font-size: 0.85rem;
+    }
+    .status-card h4 { margin-bottom: 0.5rem; color: #334155; font-size: 0.9rem; }
+    .status-meta { color: var(--muted); margin-bottom: 0.5rem; font-size: 0.8rem; }
+    .status-steps { list-style: none; }
+    .status-steps li {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.25rem 0;
+      color: #64748b;
+    }
+    .status-steps li.done { color: #15803d; }
+    .status-steps li.active { color: var(--blue); }
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      flex-shrink: 0;
+    }
+    .status-steps li.done .status-dot {
+      background: #22c55e;
+      box-shadow: 0 0 0 2px #bbf7d0;
+    }
+    .status-steps li.active .status-dot {
+      background: var(--blue);
+      animation: pulse 1s ease-in-out infinite;
+    }
+    .spin {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid #cbd5e1;
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .katex-formula.fade-in {
+      animation: fadeInK 0.45s ease-out;
+    }
+    @keyframes fadeInK {
+      from { opacity: 0; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    footer.input-area {
+      padding: 1rem 1.25rem 1.2rem;
+      border-top: 1px solid var(--border);
+      background: rgba(255,255,255,0.95);
+      display: flex;
+      gap: 0.65rem;
+      align-items: center;
+    }
+    footer.input-area input[type="text"] {
+      flex: 1;
+      padding: 0.75rem 1.1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 2rem;
+      font-size: 0.92rem;
+      outline: none;
+    }
+    footer.input-area input:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(30,136,229,0.12);
+    }
+    .footer-send {
+      border: none;
+      background: var(--blue);
+      color: #fff;
+      padding: 0.75rem 1.4rem;
+      border-radius: 2rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .footer-send:disabled { opacity: 0.55; cursor: not-allowed; }
+    .footer-hint { font-size: 0.72rem; color: var(--muted); padding: 0 1.25rem 0.6rem; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>智能学伴 · 高等数学</h1>
+    <div class="mode-switch">
+      <button type="button" id="modeQA" class="active">问答模式</button>
+      <button type="button" id="modeGuide">攻略模式</button>
+    </div>
+  </header>
+  <main id="chatBox"></main>
+  <p class="footer-hint" id="modeHint">当前：标准问答（SSE 流式 · KaTeX 公式）</p>
+  <footer class="input-area">
+    <input type="text" id="question" placeholder="输入你的问题…" autocomplete="off" />
+    <button type="button" class="footer-send" id="sendBtn">发送</button>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+<script>
+(function () {
+  'use strict';
+
+  /** 后端 API（Spring Boot edu-graph-qa 默认端口） */
+  const API_BASE = 'http://localhost:8081';
+
+  const chatBox = document.getElementById('chatBox');
+  const questionInput = document.getElementById('question');
+  const sendBtn = document.getElementById('sendBtn');
+  const modeQA = document.getElementById('modeQA');
+  const modeGuide = document.getElementById('modeGuide');
+  const modeHint = document.getElementById('modeHint');
+
+  let guideMode = false;
+  let isWaiting = false;
+  let guideCardEl = null;
+  let guideSelections = { goal: null, level: null, days: 7 };
+  let lastGuideQuestion = '';
+  let statusCardTimer = null;
+  let statusCardEl = null;
+
+  const GOAL_OPTIONS = [
+    '应对大学期末考试',
+    '为考研或更深入学习打基础',
+    '出于兴趣，想真正学懂'
+  ];
+  const LEVEL_OPTIONS = [
+    '高中数学基础扎实',
+    '基础一般',
+    '几乎零基础'
+  ];
+
+  // ---------- 终极内容过滤（与后端禁止条款对应的关键词） ----------
+  const BAN_REGEX = /学习视频|视频链接|评论区|网友评价|B站|bilibili|小红书|抖音|快手|不存在的内容|编造|虚构的.*资源|假发资源|零基础也能听懂|适合冲刺复习/gi;
+
+  /**
+   * 删除命中敏感关键词的整行、列表项或段落
+   */
+  function filterBannedContent(raw) {
+    if (raw == null || raw === '') return '';
+    const lines = String(raw).split(/\r?\n/);
+    const kept = [];
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t) { kept.push(line); continue; }
+      BAN_REGEX.lastIndex = 0;
+      if (BAN_REGEX.test(t)) continue;
+      kept.push(line);
+    }
+    let s = kept.join('\n');
+    s = s.replace(/\n{3,}/g, '\n\n');
+    return s.trim();
+  }
+
+  /** 任意助手内容展示前统一过滤 */
+  function sanitizeForDisplay(text) {
+    return filterBannedContent(text);
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function addMessage(htmlOrText, role, opts) {
+    opts = opts || {};
+    const div = document.createElement('div');
+    div.className = 'message ' + role;
+    const inner = document.createElement('div');
+    inner.className = opts.md ? 'md-content' : '';
+    if (opts.md) inner.innerHTML = htmlOrText;
+    else inner.innerHTML = htmlOrText;
+    div.appendChild(inner);
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return inner;
+  }
+
+  function showTyping() {
+    const wrap = document.createElement('div');
+    wrap.className = 'typing';
+    wrap.innerHTML = '<span></span><span></span><span></span>';
+    chatBox.appendChild(wrap);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return wrap;
+  }
+
+  function removeEl(el) {
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+
+  // ---------- 公式感知 SSE：文本逐字，$$ 与 $ 内公式闭合后整块 KaTeX + 淡入 ----------
+  function createFormulaAwareStream(containerEl) {
+    let buf = '';
+    let mode = 'text';
+    let rawAccum = '';
+    let currentTextSpan = null;
+    let typeQueue = '';
+    let typeTimer = null;
+
+    function ensureTextSpan() {
+      if (!currentTextSpan) {
+        currentTextSpan = document.createElement('span');
+        currentTextSpan.className = 'stream-plain';
+        containerEl.appendChild(currentTextSpan);
+      }
+    }
+
+    function typeTick() {
+      if (typeQueue.length === 0) {
+        if (typeTimer) { clearInterval(typeTimer); typeTimer = null; }
+        return;
+      }
+      const n = Math.min(3, typeQueue.length);
+      ensureTextSpan();
+      currentTextSpan.textContent += typeQueue.slice(0, n);
+      typeQueue = typeQueue.slice(n);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function enqueueTypeText(str) {
+      if (!str) return;
+      typeQueue += str;
+      if (!typeTimer) typeTimer = setInterval(typeTick, 10);
+    }
+
+    function firstSingleDollarIndex(s) {
+      for (let i = 0; i < s.length; i++) {
+        if (s[i] !== '$') continue;
+        if (s[i + 1] === '$') { i++; continue; }
+        if (i > 0 && s[i - 1] === '\\') continue;
+        return i;
+      }
+      return -1;
+    }
+
+    function renderKatex(tex, displayMode) {
+      const wrap = document.createElement('span');
+      wrap.className = 'katex-formula fade-in';
+      try {
+        katex.render(tex.trim(), wrap, {
+          displayMode,
+          throwOnError: false,
+          strict: 'ignore'
+        });
+      } catch (e) {
+        wrap.textContent = (displayMode ? '$$' : '$') + tex + (displayMode ? '$$' : '$');
+      }
+      containerEl.appendChild(wrap);
+      currentTextSpan = null;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function drain() {
+      while (true) {
+        if (mode === 'text') {
+          const idxDD = buf.indexOf('$$');
+          const idxS = firstSingleDollarIndex(buf);
+          const useBlock = idxDD !== -1 && (idxS === -1 || idxDD < idxS);
+          const useInline = !useBlock && idxS !== -1;
+
+          if (useBlock) {
+            const before = buf.slice(0, idxDD);
+            enqueueTypeText(before);
+            buf = buf.slice(idxDD + 2);
+            mode = 'block';
+            continue;
+          }
+          if (useInline) {
+            const before = buf.slice(0, idxS);
+            enqueueTypeText(before);
+            buf = buf.slice(idxS + 1);
+            mode = 'inline';
+            continue;
+          }
+          if (buf.length > 0 && buf[buf.length - 1] === '$') {
+            enqueueTypeText(buf.slice(0, -1));
+            buf = '$';
+            break;
+          }
+          enqueueTypeText(buf);
+          buf = '';
+          break;
+        }
+        if (mode === 'inline') {
+          const close = buf.indexOf('$');
+          if (close === -1) break;
+          const inner = buf.slice(0, close);
+          buf = buf.slice(close + 1);
+          renderKatex(inner, false);
+          mode = 'text';
+          continue;
+        }
+        if (mode === 'block') {
+          const close = buf.indexOf('$$');
+          if (close === -1) break;
+          const inner = buf.slice(0, close);
+          buf = buf.slice(close + 2);
+          renderKatex(inner, true);
+          mode = 'text';
+          continue;
+        }
+        break;
+      }
+    }
+
+    return {
+      push(chunk) {
+        if (chunk == null || chunk === '') return;
+        rawAccum += chunk;
+        buf += chunk;
+        drain();
+      },
+      finish() {
+        if (mode === 'text') {
+          enqueueTypeText(buf);
+          buf = '';
+        } else {
+          enqueueTypeText((mode === 'block' ? '$$' : '$') + buf);
+          buf = '';
+          mode = 'text';
+        }
+        if (typeTimer) { clearInterval(typeTimer); typeTimer = null; }
+        while (typeQueue.length) typeTick();
+        return rawAccum;
+      }
+    };
+  }
+
+  function renderMarkdownKatex(markdown, containerEl) {
+    const cleaned = sanitizeForDisplay(markdown);
+    marked.setOptions({ breaks: true, mangle: false, headerIds: false });
+    containerEl.innerHTML = marked.parse(cleaned);
+    if (typeof renderMathInElement === 'function') {
+      renderMathInElement(containerEl, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false },
+          { left: '\\(', right: '\\)', display: false },
+          { left: '\\[', right: '\\]', display: true }
+        ],
+        throwOnError: false
+      });
+    }
+  }
+
+  // ---------- 攻略：状态卡片（纯前端模拟进度） ----------
+  const STATUS_STEPS = [
+    '需求解析',
+    '知识体系梳理',
+    '学习计划生成',
+    '考点整理',
+    '最终优化'
+  ];
+  const EST_TOTAL_MS = 120000;
+
+  function startGuideStatusSimulation(onHidden) {
+    removeGuideStatusCard();
+    const card = document.createElement('div');
+    card.className = 'status-card';
+    card.innerHTML = '<h4>攻略生成进度</h4><div class="status-meta" id="statusMeta"></div><ul class="status-steps" id="statusSteps"></ul>';
+    chatBox.appendChild(card);
+    statusCardEl = card;
+    const ul = card.querySelector('#statusSteps');
+    const meta = card.querySelector('#statusMeta');
+    STATUS_STEPS.forEach((label, i) => {
+      const li = document.createElement('li');
+      li.dataset.idx = String(i);
+      li.innerHTML = '<span class="status-dot"></span><span class="lbl"></span>';
+      li.querySelector('.lbl').textContent = label;
+      ul.appendChild(li);
+    });
+    const t0 = Date.now();
+    function tick() {
+      const elapsed = Date.now() - t0;
+      const remain = Math.max(0, Math.ceil((EST_TOTAL_MS - elapsed) / 1000));
+      meta.textContent = '预计总耗时约 ' + Math.round(EST_TOTAL_MS / 1000) + ' 秒 · 剩余约 ' + remain + ' 秒';
+      const phase = Math.min(STATUS_STEPS.length - 1, Math.floor((elapsed / EST_TOTAL_MS) * STATUS_STEPS.length));
+      ul.querySelectorAll('li').forEach((li, i) => {
+        li.classList.remove('done', 'active');
+        const dot = li.querySelector('.status-dot');
+        if (dot && dot.querySelector('.spin')) dot.innerHTML = '';
+        if (i < phase) {
+          li.classList.add('done');
+          li.querySelector('.lbl').textContent = STATUS_STEPS[i] + ' ✓';
+        } else if (i === phase) {
+          li.classList.add('active');
+          li.querySelector('.lbl').textContent = STATUS_STEPS[i];
+          const d = li.querySelector('.status-dot');
+          d.innerHTML = '<span class="spin"></span>';
+        } else {
+          li.querySelector('.lbl').textContent = STATUS_STEPS[i];
+        }
+      });
+    }
+    tick();
+    statusCardTimer = setInterval(tick, 500);
+    return {
+      stop(success) {
+        if (statusCardTimer) { clearInterval(statusCardTimer); statusCardTimer = null; }
+        if (!statusCardEl) return;
+        const ul2 = statusCardEl.querySelector('#statusSteps');
+        ul2.querySelectorAll('li').forEach((li, i) => {
+          li.classList.remove('active');
+          li.classList.add('done');
+          const dot = li.querySelector('.status-dot');
+          dot.innerHTML = '';
+          li.querySelector('.lbl').textContent = STATUS_STEPS[i] + ' ✓';
+        });
+        statusCardEl.querySelector('#statusMeta').textContent = success ? '已完成' : '已结束';
+        setTimeout(() => {
+          removeGuideStatusCard();
+          if (typeof onHidden === 'function') onHidden();
+        }, 800);
+      }
+    };
+  }
+
+  function removeGuideStatusCard() {
+    if (statusCardTimer) { clearInterval(statusCardTimer); statusCardTimer = null; }
+    removeEl(statusCardEl);
+    statusCardEl = null;
+  }
+
+  // ---------- 攻略引导卡片 ----------
+  function clearGuideCard() {
+    removeEl(guideCardEl);
+    guideCardEl = null;
+    guideSelections = { goal: null, level: null, days: 7 };
+    if (!isWaiting) {
+      sendBtn.disabled = false;
+      questionInput.disabled = false;
+    }
+  }
+
+  function hideGuideCardAndResetSelections() {
+    clearGuideCard();
+  }
+
+  function setModeQA() {
+    guideMode = false;
+    modeQA.classList.add('active');
+    modeGuide.classList.remove('active');
+    modeHint.textContent = '当前：标准问答（SSE 流式 · KaTeX 公式）';
+    questionInput.placeholder = '输入你的问题…';
+    hideGuideCardAndResetSelections();
+  }
+
+  function setModeGuide() {
+    guideMode = true;
+    modeGuide.classList.add('active');
+    modeQA.classList.remove('active');
+    modeHint.textContent = '当前：攻略模式（先填写学习目标与基础）';
+    questionInput.placeholder = '例如：我想系统掌握微积分…';
+  }
+
+  function buildGuideCard() {
+    clearGuideCard();
+    const card = document.createElement('div');
+    card.className = 'guide-card';
+    card.innerHTML =
+      '<h3>为了制定学习攻略，请选择：</h3>' +
+      '<div class="guide-section" data-key="goal"><strong>学习目标</strong><div class="chip-row"></div></div>' +
+      '<div class="guide-section" data-key="level"><strong>当前基础</strong><div class="chip-row"></div></div>' +
+      '<div class="guide-section" data-key="days"><strong>学习天数</strong>' +
+      '<div class="days-row"><input type="number" min="1" max="365" value="' + (guideSelections.days || 7) + '" id="guideDaysInput" /><span>天</span></div></div>' +
+      '<div class="guide-actions">' +
+      '<button type="button" class="btn-cancel" id="guideBtnCancel">取消</button>' +
+      '<button type="button" class="btn-send-guide" id="guideBtnSend">发送</button></div>';
+
+    const goalRow = card.querySelector('[data-key="goal"] .chip-row');
+    const levelRow = card.querySelector('[data-key="level"] .chip-row');
+
+    function bindChips(row, options, key) {
+      options.forEach((label) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip';
+        b.textContent = label;
+        b.addEventListener('click', () => {
+          if (b.disabled) return;
+          row.querySelectorAll('.chip').forEach((c) => c.classList.remove('selected'));
+          if (guideSelections[key] === label) {
+            guideSelections[key] = null;
+          } else {
+            guideSelections[key] = label;
+            b.classList.add('selected');
+          }
+        });
+        row.appendChild(b);
+      });
+    }
+    bindChips(goalRow, GOAL_OPTIONS, 'goal');
+    bindChips(levelRow, LEVEL_OPTIONS, 'level');
+
+    const daysInput = card.querySelector('#guideDaysInput');
+    daysInput.addEventListener('change', () => {
+      let v = parseInt(daysInput.value, 10);
+      if (Number.isNaN(v) || v < 1) v = 1;
+      if (v > 365) v = 365;
+      daysInput.value = String(v);
+      guideSelections.days = v;
+    });
+
+    card.querySelector('#guideBtnCancel').addEventListener('click', () => {
+      clearGuideCard();
+      setModeQA();
+    });
+
+    card.querySelector('#guideBtnSend').addEventListener('click', () => submitGuideFromCard(card));
+
+    chatBox.appendChild(card);
+    guideCardEl = card;
+    sendBtn.disabled = true;
+    questionInput.disabled = true;
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function setGuideCardDisabled(card, dis) {
+    card.querySelectorAll('.chip').forEach((c) => { c.disabled = dis; });
+    const d = card.querySelector('#guideDaysInput');
+    if (d) d.disabled = dis;
+    card.querySelector('#guideBtnCancel').disabled = dis;
+    card.querySelector('#guideBtnSend').disabled = dis;
+  }
+
+  async function submitGuideFromCard(card) {
+    const daysInput = card.querySelector('#guideDaysInput');
+    let days = parseInt(daysInput.value, 10);
+    if (Number.isNaN(days) || days < 1) days = 7;
+    if (days > 365) days = 365;
+    guideSelections.days = days;
+
+    if (!guideSelections.goal || !guideSelections.level) {
+      alert('请选择学习目标与当前基础');
+      return;
+    }
+    if (!lastGuideQuestion.trim()) {
+      alert('请先输入学习主题或描述');
+      return;
+    }
+
+    isWaiting = true;
+    sendBtn.disabled = true;
+    questionInput.disabled = true;
+    setGuideCardDisabled(card, true);
+    const sim = startGuideStatusSimulation();
+
+    try {
+      const res = await fetch(API_BASE + '/api/guide/generate-md', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          goal: guideSelections.goal,
+          level: guideSelections.level,
+          days: guideSelections.days,
+          question: lastGuideQuestion
+        })
+      });
+      const data = await res.json();
+      sim.stop(true);
+      clearGuideCard();
+
+      if (!data.success) {
+        addMessage(escapeHtml(data.error || '生成失败'), 'assistant', { md: false });
+        return;
+      }
+      const md = sanitizeForDisplay(data.markdown || '');
+      const inner = addMessage('', 'assistant', { md: true });
+      renderMarkdownKatex(md, inner);
+    } catch (e) {
+      console.error(e);
+      sim.stop(false);
+      clearGuideCard();
+      addMessage(escapeHtml('网络错误：' + (e.message || e)), 'assistant', { md: false });
+    } finally {
+      isWaiting = false;
+      sendBtn.disabled = false;
+      questionInput.disabled = false;
+    }
+  }
+
+  // ---------- 问答 SSE ----------
+  async function sendChatStream(question) {
+    isWaiting = true;
+    sendBtn.disabled = true;
+    const typing = showTyping();
+
+    const inner = addMessage('', 'assistant', { md: false });
+    inner.classList.add('md-content');
+    const streamer = createFormulaAwareStream(inner);
+
+    try {
+      const res = await fetch(API_BASE + '/smart-ask-stream?q=' + encodeURIComponent(question));
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let carry = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        carry += dec.decode(value, { stream: true });
+        const lines = carry.split(/\r?\n/);
+        carry = lines.pop() ?? '';
+        for (const line of lines) {
+          if (line.startsWith('data:')) {
+            streamer.push(line.substring(5));
+          }
+        }
+      }
+      const raw = streamer.finish();
+      removeEl(typing);
+      const cleaned = sanitizeForDisplay(raw);
+      renderMarkdownKatex(cleaned, inner);
+    } catch (e) {
+      console.error(e);
+      removeEl(typing);
+      inner.innerHTML = escapeHtml('抱歉，网络或流式响应异常：' + (e.message || e));
+    } finally {
+      isWaiting = false;
+      sendBtn.disabled = false;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  }
+
+  function onFooterSend() {
+    if (isWaiting) return;
+    const q = questionInput.value.trim();
+    if (!q) return;
+
+    addMessage(escapeHtml(q).replace(/\n/g, '<br/>'), 'user', { md: false });
+    questionInput.value = '';
+
+    if (guideMode) {
+      lastGuideQuestion = q;
+      buildGuideCard();
+      return;
+    }
+
+    sendChatStream(q);
+  }
+
+  sendBtn.addEventListener('click', onFooterSend);
+  questionInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') onFooterSend();
+  });
+  modeQA.addEventListener('click', setModeQA);
+  modeGuide.addEventListener('click', setModeGuide);
+
+  addMessage(
+    '你好！可使用<strong>问答模式</strong>（流式输出 + 公式）或<strong>攻略模式</strong>（选择目标、基础与学习天数）。',
+    'assistant',
+    { md: true }
+  );
+})();
+</script>
+</body>
+</html>

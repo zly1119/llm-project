@@ -1,0 +1,29 @@
+server:
+  port: 8103
+
+spring:
+  application:
+    name: qa-service
+  cloud:
+    nacos:
+      username: nacos
+      password: yaolezhang1119
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+      eager: true
+
+dashscope:
+  api-key: ${DASHSCOPE_API_KEY:sk-b2380d5cbf064b4f9ea2546127bd816f}
+  model: ${DASHSCOPE_MODEL:qwen-plus}
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 120000

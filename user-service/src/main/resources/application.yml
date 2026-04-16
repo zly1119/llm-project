@@ -1,0 +1,24 @@
+server:
+  port: 8101
+
+spring:
+  application:
+    name: user-service
+  cloud:
+    nacos:
+      username: nacos
+      password: yaolezhang1119
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DB:0}
+
+app:
+  session:
+    redis-ttl-hours: 12

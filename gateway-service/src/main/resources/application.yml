@@ -1,0 +1,65 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    nacos:
+      username: nacos
+      password: yaolezhang1119
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+    gateway:
+      routes:
+        # 页面由 qa-service 提供静态资源（网关只做转发，避免 WebFlux 与 Gateway 静态资源冲突）
+        - id: ui-home
+          uri: lb://qa-service
+          predicates:
+            - Path=/
+        - id: ui-index
+          uri: lb://qa-service
+          predicates:
+            - Path=/index.html
+        - id: ui-app
+          uri: lb://qa-service
+          predicates:
+            - Path=/app,/app/**
+        - id: api-chat
+          uri: lb://qa-service
+          predicates:
+            - Path=/api/chat
+          filters:
+            - StripPrefix=1
+        - id: api-guide-post
+          uri: lb://guide-service
+          predicates:
+            - Path=/api/guide
+          filters:
+            - StripPrefix=1
+        - id: api-guide-result
+          uri: lb://guide-service
+          predicates:
+            - Path=/api/guideResult
+          filters:
+            - StripPrefix=1
+        - id: api-kg
+          uri: lb://kg-service
+          predicates:
+            - Path=/api/kg/**
+          filters:
+            - StripPrefix=1
+        - id: api-session
+          uri: lb://user-service
+          predicates:
+            - Path=/api/session/**
+          filters:
+            - StripPrefix=1
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:127.0.0.1:8858}
+      eager: true
+
+# Sentinel 限流示例：在 Nacos 或 Dash 控制台配置 gateway 资源名为路由 id（如 api-chat）时生效

@@ -1,0 +1,19 @@
+server:
+  port: 8102
+
+spring:
+  application:
+    name: kg-service
+  cloud:
+    nacos:
+      username: nacos
+      password: yaolezhang1119
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+  neo4j:
+    uri: ${NEO4J_URI:bolt://127.0.0.1:7687}
+    authentication:
+      username: ${NEO4J_USER:neo4j}
+      password: ${NEO4J_PASSWORD:yaolezhang1}
