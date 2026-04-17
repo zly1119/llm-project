@@ -370,29 +370,29 @@
                                    const formulaStore = [];
                                    let s = text || '';
                                    // 保护 $$...$$ 块（先处理，避免被 $...$ 规则吃掉）
-                                   s = s.replace(/\\$\\$([\\s\\S]+?)\\$\\$/g, (_, inner) => {
+                                   s = s.replace(/\$\$([\s\S]+?)\$\$/g, (_, inner) => {
                                        formulaStore.push('$$' + inner + '$$');
                                        return '@@FORMULA_' + (formulaStore.length - 1) + '@@';
                                    });
                                    // 保护 $...$（行内，不跨行）
-                                   s = s.replace(/\\$([^\\$\\n]+?)\\$/g, (_, inner) => {
+                                   s = s.replace(/\$([^$\n]+?)\$/g, (_, inner) => {
                                        formulaStore.push('$' + inner + '$');
                                        return '@@FORMULA_' + (formulaStore.length - 1) + '@@';
                                    });
-                                   // 保护 \\[...\\] 块
-                                   s = s.replace(/\\\\\\[([\\s\\S]+?)\\\\\\]/g, (_, inner) => {
-                                       formulaStore.push('\\\\[' + inner + '\\\\]');
+                                   // 保护 \[...\] 块（LaTeX）
+                                   s = s.replace(/\\\[([\s\S]+?)\\\]/g, (_, inner) => {
+                                       formulaStore.push('\\[' + inner + '\\]');
                                        return '@@FORMULA_' + (formulaStore.length - 1) + '@@';
                                    });
-                                   // 保护 \\(...\\) 行内
-                                   s = s.replace(/\\\\\\(([\\s\\S]+?)\\\\\\)/g, (_, inner) => {
-                                       formulaStore.push('\\\\(' + inner + '\\\\)');
+                                   // 保护 \(...\) 行内
+                                   s = s.replace(/\\\(([\s\S]+?)\\\)/g, (_, inner) => {
+                                       formulaStore.push('\\(' + inner + '\\)');
                                        return '@@FORMULA_' + (formulaStore.length - 1) + '@@';
                                    });
                                    // 2. Markdown 渲染
                                    let raw = marked.parse(s);
                                    // 3. 还原公式占位符（在 DOMPurify 之前还原，保证公式字符串完整）
-                                   raw = raw.replace(/@@FORMULA_(\\d+)@@/g, (_, i) => formulaStore[parseInt(i)]);
+                                   raw = raw.replace(/@@FORMULA_(\d+)@@/g, (_, i) => formulaStore[parseInt(i)]);
                                    // 4. 安全净化（允许 MathJax 所需的 class/style）
                                    if (typeof DOMPurify !== 'undefined') {
                                        return DOMPurify.sanitize(raw, {
@@ -410,7 +410,7 @@
                                    if (role === 'assistant' && isMarkdown) {
                                        div.innerHTML = renderAssistantMarkdown(text);
                                    } else {
-                                       div.innerHTML = text.replace(/\\n/g, '<br>');
+                                       div.innerHTML = text.replace(/\n/g, '<br>');
                                    }
                                    chatBox.appendChild(div);
                                    chatBox.scrollTop = chatBox.scrollHeight;
@@ -427,7 +427,7 @@
                                    element.innerHTML = '';
                                    const chars = [];
                                    for (let i = 0; i < fullText.length; i++) {
-                                       if (fullText[i] === '\\n') {
+                                       if (fullText[i] === '\n') {
                                            chars.push('<br>');
                                        } else {
                                            chars.push(fullText[i]);

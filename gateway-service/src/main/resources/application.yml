@@ -23,10 +23,16 @@ spring:
           uri: lb://qa-service
           predicates:
             - Path=/index.html
-        - id: ui-app
+        - id: ui-app-entry
           uri: lb://qa-service
           predicates:
-            - Path=/app,/app/**
+            - Path=/app,/app/
+          filters:
+            - SetPath=/app/index.html
+        - id: ui-app-assets
+          uri: lb://qa-service
+          predicates:
+            - Path=/app/**
         - id: api-chat
           uri: lb://qa-service
           predicates:

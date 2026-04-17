@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Map;
 
-@FeignClient(name = "kg-service", contextId = "kgGuide")
+@FeignClient(name = "kg-service", url = "http://localhost:8102", contextId = "kgGuide")
 public interface KgGuideClient {
 
     @GetMapping("/kg/knowledge-outline")
