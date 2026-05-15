@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -21,11 +22,10 @@ public class KnowledgeGraphService {
         this.driver = driver;
     }
 
-    /** 与单体 queryKnowledgeGraph 一致：按问题串模糊匹配概念名，取第一条 definition。 */
     public Optional<String> findDefinitionByKeyword(String keyword) {
         String cypher =
                 """
-                MATCH (n:Concept)
+                MATCH (n:知识点)
                 WHERE toLower(n.name) CONTAINS toLower($name)
                 RETURN n.definition AS definition
                 LIMIT 1
@@ -41,7 +41,7 @@ public class KnowledgeGraphService {
     public List<KgConceptDto> search(String keyword) {
         String cypher =
                 """
-                MATCH (n:Concept)
+                MATCH (n:知识点)
                 WHERE toLower(n.name) CONTAINS toLower($kw)
                    OR toLower(coalesce(n.definition,'')) CONTAINS toLower($kw)
                 RETURN n.name AS name,
@@ -67,11 +67,10 @@ public class KnowledgeGraphService {
                         .all());
     }
 
-    /** 攻略提示词用：全书概念按章节列出（与 Main#getAllKnowledge 一致）。 */
     public String exportConceptOutline() {
         String cypher =
                 """
-                MATCH (n:Concept)
+                MATCH (n:知识点)
                 RETURN coalesce(n.chapter,'未分类') AS chapter, n.name AS name
                 ORDER BY chapter, name
                 """;
@@ -80,9 +79,9 @@ public class KnowledgeGraphService {
         try (var session = driver.session()) {
             var result = session.run(cypher);
             while (result.hasNext()) {
-                var r = result.next();
-                String chapter = r.get("chapter").isNull() ? "未分类" : r.get("chapter").asString();
-                String name = r.get("name").asString();
+                var record = result.next();
+                String chapter = record.get("chapter").isNull() ? "未分类" : record.get("chapter").asString();
+                String name = record.get("name").asString();
                 if (!chapter.equals(currentChapter)) {
                     currentChapter = chapter;
                     sb.append("\n### ").append(currentChapter).append("\n");
@@ -96,11 +95,63 @@ public class KnowledgeGraphService {
     public String buildAssociationMarkdown(String userQuestion) {
         String q = userQuestion == null ? "" : userQuestion.trim();
         LinkedHashSet<String> chapters = new LinkedHashSet<>();
+        chapters.addAll(findChaptersFromGraph(q));
+        chapters.addAll(ChapterKeywordInference.inferChaptersFromQuestion(q));
 
+        StringBuilder md = new StringBuilder();
+        md.append("## 知识体系与章节关联\n\n");
+        if (chapters.isEmpty()) {
+            md.append("未明确匹配到特定章节，建议先从以下基础内容开始：\n");
+            md.append("- 第一章 函数、极限与连续\n");
+            md.append("- 第二章 一元函数微分学：导数与微分\n");
+            return md.toString();
+        }
+
+        if (isBroadTopic(q)) {
+            md.append("检测到这是一个范围较宽的主题，已结合知识图谱与课程结构自动展开关联章节：\n");
+        } else {
+            md.append("根据知识图谱与主题词推断，当前问题优先关联以下章节：\n");
+        }
+        for (String chapter : chapters) {
+            md.append("- ").append(chapter).append("\n");
+        }
+        return md.toString();
+    }
+
+    public Map<String, Object> capabilitySummary() {
+        return Map.of(
+                "scope", "当前 Demo 重点覆盖高等数学知识图谱与学习规划，不是所有数学分支。",
+                "chapterCount", countChapters(),
+                "conceptCount", countConcepts(),
+                "focusAreas",
+                        List.of(
+                                "函数、极限与连续",
+                                "一元函数微分学",
+                                "一元函数积分学",
+                                "常微分方程",
+                                "多元函数微分学",
+                                "多元函数积分学",
+                                "曲线曲面积分",
+                                "无穷级数"),
+                "tolerance",
+                        List.of(
+                                "支持口语化提问、章节级主题、概念别名和部分模糊描述。",
+                                "攻略模式遇到“微积分 / 高数”这类宽主题时，会自动扩展关联章节。",
+                                "超出高等数学范围，或特别细的竞赛证明、纯理论延伸题，结果可能不稳定。"));
+    }
+
+    private List<String> findChaptersFromGraph(String question) {
+        String q = question == null ? "" : question.trim();
+        if (q.isBlank()) {
+            return List.of();
+        }
+
+        LinkedHashSet<String> chapters = new LinkedHashSet<>();
         String cypher =
                 """
-                MATCH (n:Concept)
-                WHERE toLower($q) CONTAINS toLower(n.name) OR toLower(n.name) CONTAINS toLower($q)
+                MATCH (n:知识点)
+                WHERE toLower($q) CONTAINS toLower(n.name)
+                   OR toLower(n.name) CONTAINS toLower($q)
                 RETURN DISTINCT coalesce(n.chapter,'') AS ch
                 LIMIT 32
                 """;
@@ -118,19 +169,36 @@ public class KnowledgeGraphService {
                     });
         } catch (Exception ignored) {
         }
+        return new ArrayList<>(chapters);
+    }
 
-        if (chapters.isEmpty()) {
-            chapters.addAll(ChapterKeywordInference.inferChaptersFromQuestion(q));
-        }
+    private boolean isBroadTopic(String question) {
+        String q = question == null ? "" : question.toLowerCase();
+        return q.contains("微积分") || q.contains("高数") || q.contains("高等数学") || q.contains("calculus");
+    }
 
-        StringBuilder md = new StringBuilder();
-        md.append("## 知识体系与章节关联\n\n");
-        md.append("根据知识图谱检测到关联章节有：");
-        if (chapters.isEmpty()) {
-            md.append("未明确匹配到特定章节，建议从基础章节（函数与极限、导数与微分）开始学习。\n\n");
-        } else {
-            md.append(String.join("、", chapters)).append("。\n\n");
-        }
-        return md.toString();
+    private long countConcepts() {
+        String cypher = "MATCH (n:知识点) RETURN count(n) AS total";
+        return neo4jClient
+                .query(cypher)
+                .fetchAs(Long.class)
+                .mappedBy((t, r) -> r.get("total").asLong())
+                .one()
+                .orElse(0L);
+    }
+
+    private long countChapters() {
+        String cypher =
+                """
+                MATCH (n:知识点)
+                WHERE trim(coalesce(n.chapter,'')) <> ''
+                RETURN count(DISTINCT n.chapter) AS total
+                """;
+        return neo4jClient
+                .query(cypher)
+                .fetchAs(Long.class)
+                .mappedBy((t, r) -> r.get("total").asLong())
+                .one()
+                .orElse(0L);
     }
 }

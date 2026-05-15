@@ -10,8 +10,8 @@
                                let stageInterval = null;
                                MathJax = {
                                    tex: {
-                                       inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
-                                       displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+                                       inlineMath: [['$', '$'], ['\\(', '\\)']],
+                                       displayMath: [['$$', '$$'], ['\\[', '\\]']],
                                        processEscapes: true,
                                        processEnvironments: true
                                    },
@@ -296,17 +296,101 @@
                                        transform: scale(0.98);
                                    }
                                    .footer {
-                                       text-align: center;
                                        font-size: 0.7rem;
-                                       padding: 0.5rem;
+                                       padding: 0.6rem 1rem;
                                        color: #5a6e8a;
                                        background: rgba(255,255,255,0.6);
                                        border-top: 1px solid rgba(0,0,0,0.03);
+                                       display: flex;
+                                       align-items: center;
+                                       justify-content: space-between;
+                                       gap: 0.8rem;
+                                       flex-wrap: wrap;
+                                   }
+                                   .footer-meta {
+                                       display: flex;
+                                       align-items: center;
+                                       gap: 0.35rem;
+                                   }
+                                   .footer-action {
+                                       border: 1px solid #cbd5e1;
+                                       background: white;
+                                       color: #1f3b5b;
+                                       border-radius: 999px;
+                                       padding: 0.35rem 0.85rem;
+                                       font-size: 0.76rem;
+                                       font-weight: 600;
+                                       cursor: pointer;
+                                       transition: 0.2s;
+                                   }
+                                   .footer-action:hover {
+                                       border-color: #1e88e5;
+                                       color: #1e88e5;
+                                   }
+                                   .capability-panel {
+                                       margin: 0 1rem;
+                                       padding: 0.95rem 1rem;
+                                       background: rgba(255,255,255,0.88);
+                                       border-top: 1px solid rgba(0,0,0,0.05);
+                                       border-left: 4px solid #1e88e5;
+                                   }
+                                   .capability-panel.hidden {
+                                       display: none;
+                                   }
+                                   .capability-panel h3 {
+                                       font-size: 0.95rem;
+                                       color: #16324f;
+                                       margin-bottom: 0.55rem;
+                                   }
+                                   .capability-panel p {
+                                       font-size: 0.82rem;
+                                       color: #334155;
+                                       line-height: 1.65;
+                                       margin: 0.25rem 0;
+                                   }
+                                   .capability-grid {
+                                       display: grid;
+                                       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                                       gap: 0.7rem;
+                                       margin: 0.8rem 0;
+                                   }
+                                   .capability-card {
+                                       background: #f8fbff;
+                                       border: 1px solid #d9e8f8;
+                                       border-radius: 0.9rem;
+                                       padding: 0.8rem 0.9rem;
+                                   }
+                                   .capability-card strong {
+                                       display: block;
+                                       color: #16324f;
+                                       margin-bottom: 0.3rem;
+                                       font-size: 0.82rem;
+                                   }
+                                   .capability-card span {
+                                       color: #475569;
+                                       font-size: 0.78rem;
+                                       line-height: 1.6;
+                                   }
+                                   .capability-tags {
+                                       display: flex;
+                                       flex-wrap: wrap;
+                                       gap: 0.4rem;
+                                       margin-top: 0.55rem;
+                                   }
+                                   .capability-tag {
+                                       background: #eef5ff;
+                                       color: #1d4f91;
+                                       border-radius: 999px;
+                                       padding: 0.28rem 0.65rem;
+                                       font-size: 0.74rem;
+                                       border: 1px solid #d7e5f7;
                                    }
                                    @media (max-width: 640px) {
                                        .message { max-width: 90%; }
                                        .chat-box { padding: 1rem; }
                                        .header { flex-direction: column; align-items: flex-start; }
+                                       .footer { align-items: stretch; }
+                                       .footer-action { width: 100%; }
                                    }
                                </style>
                            </head>
@@ -336,7 +420,11 @@
                                    <input type="text" id="question" placeholder="输入你的问题..." autofocus />
                                    <button id="sendBtn">发送</button>
                                </div>
-                               <div class="footer">🔍 支持连续对话 </div>
+                               <div id="capabilityPanel" class="capability-panel hidden"></div>
+                               <div class="footer">
+                                   <div class="footer-meta">🔍 支持连续对话</div>
+                                   <button id="capabilityBtn" class="footer-action" type="button">查看 Demo 能力范围</button>
+                               </div>
                            </div>
                     
                            <script>
@@ -347,12 +435,23 @@
                                const modeQABtn = document.getElementById('modeQABtn');
                                const modeGuideBtn = document.getElementById('modeGuideBtn');
                                const modeHint = document.getElementById('modeHint');
+                               const capabilityBtn = document.getElementById('capabilityBtn');
+                               const capabilityPanel = document.getElementById('capabilityPanel');
                     
                                // 状态变量
                                let guideMode = false;          // false: 问答模式, true: 攻略模式
                                let isWaiting = false;          // 防止重复发送
                                let pendingInfo = null;         // 临时存储信息收集的选项
                                let lastGuideQuestion = '';     // 攻略模式：用户原始问题（输入框清空后仍用于后续请求）
+                               let capabilityLoaded = false;
+
+                               const capabilityFallback = {
+                                   chapterCount: 12,
+                                   conceptCount: null,
+                                   scope: '当前 Demo 重点覆盖高等数学，不是所有数学分支。更适合高数课程学习、复习与章节规划。',
+                                   focusAreas: ['函数、极限与连续', '一元函数微分学', '一元函数积分学', '常微分方程', '多元函数微分学', '多元函数积分学', '曲线曲面积分', '无穷级数'],
+                                   tolerance: ['支持口语化提问、章节级主题、概念别名和部分模糊描述。', '攻略模式遇到“微积分 / 高数”这类宽主题时，会自动扩展为更完整的关联章节。', '超出高等数学范围，或特别细的竞赛证明、纯理论延伸题，结果可能不稳定。']
+                               };
                     
                                // ---------- Markdown：GFM + 自动换行 + 安全 HTML ----------
                                function configureMarked() {
@@ -366,34 +465,62 @@
                                }
                                configureMarked();
                                function renderAssistantMarkdown(text) {
+                                   function normalizeLatex(source) {
+                                       return String(source || '')
+                                           
+                                           .replace(/\\\\(?=[()[\]])/g, '\\')
+                                           .replace(/\\\\(?=[a-zA-Z])/g, '\\');
+                                   }
+
                                    // 1. 先把公式占位，防止 marked 把 $ _ * 等符号当 Markdown 处理
                                    const formulaStore = [];
-                                   let s = text || '';
+                                   let s = normalizeLatex(text);
+                                   let formulaIndex = 0;
+
+                                   function pushFormula(content, isDisplay) {
+                                       const token = `@@FORMULA_${formulaIndex}@@`;
+                                       formulaStore.push({ content, isDisplay });
+                                       formulaIndex++;
+                                       return isDisplay ? `\n\n${token}\n\n` : token;
+                                   }
+
                                    // 保护 $$...$$ 块（先处理，避免被 $...$ 规则吃掉）
                                    s = s.replace(/\$\$([\s\S]+?)\$\$/g, (_, inner) => {
-                                       formulaStore.push('$$' + inner + '$$');
-                                       return '@@FORMULA_' + (formulaStore.length - 1) + '@@';
+                                       return pushFormula('$$' + normalizeLatex(inner).trim() + '$$', true);
                                    });
                                    // 保护 $...$（行内，不跨行）
                                    s = s.replace(/\$([^$\n]+?)\$/g, (_, inner) => {
-                                       formulaStore.push('$' + inner + '$');
-                                       return '@@FORMULA_' + (formulaStore.length - 1) + '@@';
+                                       return pushFormula('\\(' + normalizeLatex(inner).trim() + '\\)', false);
                                    });
                                    // 保护 \[...\] 块（LaTeX）
                                    s = s.replace(/\\\[([\s\S]+?)\\\]/g, (_, inner) => {
-                                       formulaStore.push('\\[' + inner + '\\]');
-                                       return '@@FORMULA_' + (formulaStore.length - 1) + '@@';
+                                       return pushFormula('\\[' + normalizeLatex(inner).trim() + '\\]', true);
                                    });
                                    // 保护 \(...\) 行内
                                    s = s.replace(/\\\(([\s\S]+?)\\\)/g, (_, inner) => {
-                                       formulaStore.push('\\(' + inner + '\\)');
-                                       return '@@FORMULA_' + (formulaStore.length - 1) + '@@';
+                                       return pushFormula('\\(' + normalizeLatex(inner).trim() + '\\)', false);
                                    });
                                    // 2. Markdown 渲染
                                    let raw = marked.parse(s);
-                                   // 3. 还原公式占位符（在 DOMPurify 之前还原，保证公式字符串完整）
-                                   raw = raw.replace(/@@FORMULA_(\d+)@@/g, (_, i) => formulaStore[parseInt(i)]);
-                                   // 4. 安全净化（允许 MathJax 所需的 class/style）
+                                   // 3. 还原块级公式：单独替换成独立容器，避免被包进同一段落
+                                   raw = raw.replace(/<p>\s*@@FORMULA_(\d+)@@\s*<\/p>/g, (_, i) => {
+                                       const formula = formulaStore[parseInt(i, 10)];
+                                       if (!formula) return '';
+                                       if (formula.isDisplay) {
+                                           return `<div class="math-block tex2jax_process">${formula.content}</div>`;
+                                       }
+                                       return `<p><span class="math-inline tex2jax_process">${formula.content}</span></p>`;
+                                   });
+                                   // 4. 还原剩余行内公式
+                                   raw = raw.replace(/@@FORMULA_(\d+)@@/g, (_, i) => {
+                                       const formula = formulaStore[parseInt(i, 10)];
+                                       if (!formula) return '';
+                                       if (formula.isDisplay) {
+                                           return `<div class="math-block tex2jax_process">${formula.content}</div>`;
+                                       }
+                                       return `<span class="math-inline tex2jax_process">${formula.content}</span>`;
+                                   });
+                                   // 5. 安全净化（允许 MathJax 所需的 class/style）
                                    if (typeof DOMPurify !== 'undefined') {
                                        return DOMPurify.sanitize(raw, {
                                            USE_PROFILES: { html: true },
@@ -404,6 +531,82 @@
                                }
                     
                                // ---------- 辅助函数 ----------
+                               function tryTypeset(targets) {
+                                   if (!window.MathJax || typeof MathJax.typesetPromise !== 'function') return Promise.resolve();
+                                   return MathJax.typesetPromise(targets).catch(err => console.warn('MathJax:', err));
+                               }
+
+                               function escapeText(text) {
+                                   return String(text ?? '')
+                                       .replace(/&/g, '&amp;')
+                                       .replace(/</g, '&lt;')
+                                       .replace(/>/g, '&gt;')
+                                       .replace(/"/g, '&quot;')
+                                       .replace(/'/g, '&#39;');
+                               }
+
+                               function renderCapabilityPanel(data) {
+                                   const info = { ...capabilityFallback, ...(data || {}) };
+                                   const conceptText = info.conceptCount ? `${info.conceptCount} 个已导入图谱知识点` : '知识点数量随图谱导入内容变化';
+                                   const chapterText = info.chapterCount ? `${info.chapterCount} 个章节层级` : '章节范围以高等数学主线为主';
+                                   const areaTags = (info.focusAreas || capabilityFallback.focusAreas)
+                                       .map(item => `<span class="capability-tag">${escapeText(item)}</span>`)
+                                       .join('');
+                                   const toleranceHtml = (info.tolerance || capabilityFallback.tolerance)
+                                       .map(item => `<p>${escapeText(item)}</p>`)
+                                       .join('');
+
+                                   capabilityPanel.innerHTML = `
+                                       <h3>Demo 能力范围</h3>
+                                       <p>${escapeText(info.scope)}</p>
+                                       <div class="capability-grid">
+                                           <div class="capability-card">
+                                               <strong>覆盖章节</strong>
+                                               <span>${escapeText(chapterText)}</span>
+                                           </div>
+                                           <div class="capability-card">
+                                               <strong>知识点规模</strong>
+                                               <span>${escapeText(conceptText)}</span>
+                                           </div>
+                                           <div class="capability-card">
+                                               <strong>更适合的问题</strong>
+                                               <span>高等数学概念理解、公式应用、题型思路、学习攻略与章节规划。</span>
+                                           </div>
+                                       </div>
+                                       <p><strong>当前重点：</strong></p>
+                                       <div class="capability-tags">${areaTags}</div>
+                                       <p style="margin-top:0.7rem;"><strong>容错说明：</strong></p>
+                                       ${toleranceHtml}
+                                   `;
+                               }
+
+                               async function loadCapabilitySummary() {
+                                   try {
+                                       const res = await fetch('/api/kg/capability-summary');
+                                       if (!res.ok) throw new Error('HTTP ' + res.status);
+                                       renderCapabilityPanel(await res.json());
+                                   } catch (e) {
+                                       console.warn('capability-summary:', e);
+                                       renderCapabilityPanel();
+                                   }
+                                   capabilityLoaded = true;
+                               }
+
+                               async function toggleCapabilityPanel() {
+                                   const isHidden = capabilityPanel.classList.contains('hidden');
+                                   if (!isHidden) {
+                                       capabilityPanel.classList.add('hidden');
+                                       capabilityBtn.innerText = '查看 Demo 能力范围';
+                                       return;
+                                   }
+                                   capabilityPanel.classList.remove('hidden');
+                                   capabilityBtn.innerText = '收起能力范围';
+                                   if (!capabilityLoaded) {
+                                       capabilityPanel.innerHTML = '<h3>Demo 能力范围</h3><p>正在加载范围说明...</p>';
+                                       await loadCapabilitySummary();
+                                   }
+                               }
+
                                function addMessage(text, role, isMarkdown = false) {
                                    const div = document.createElement('div');
                                    div.className = `message ${role}`;
@@ -415,31 +618,32 @@
                                    chatBox.appendChild(div);
                                    chatBox.scrollTop = chatBox.scrollHeight;
                                    // MathJax 排版：等 DOM 稳定后再触发
-                                   if (window.MathJax && MathJax.typesetPromise) {
-                                       MathJax.typesetPromise([div]).catch(err => console.warn('MathJax:', err));
-                                   }
+                                   tryTypeset([div]);
                                    return div;
                                }
                     
-                               // 打字机效果（仅用于普通文本，Markdown 内容暂不适用，但攻略模式我们直接显示渲染结果，不逐字）
-                               function typeMessage(element, fullText, callback) {
+                               // 打字机效果：逐字显示，结束后再交给现有 Markdown/MathJax 渲染链
+                               function typeMessage(element, fullText, isMarkdown = false, callback) {
                                    let index = 0;
-                                   element.innerHTML = '';
-                                   const chars = [];
-                                   for (let i = 0; i < fullText.length; i++) {
-                                       if (fullText[i] === '\n') {
-                                           chars.push('<br>');
-                                       } else {
-                                           chars.push(fullText[i]);
-                                       }
-                                   }
+                                   element.textContent = '';
+                                   element.style.whiteSpace = 'pre-wrap';
                                    function addChar() {
-                                       if (index < chars.length) {
-                                           element.innerHTML += chars[index];
+                                       if (index < fullText.length) {
+                                           element.textContent += fullText[index];
                                            index++;
+                                           chatBox.scrollTop = chatBox.scrollHeight;
                                            setTimeout(addChar, 18);
                                        } else {
-                                           if (window.MathJax) MathJax.typesetPromise([element]);
+                                           if (isMarkdown) {
+                                               element.style.whiteSpace = '';
+                                               element.innerHTML = renderAssistantMarkdown(fullText);
+                                               if (window.MathJax && typeof MathJax.typesetClear === 'function') {
+                                                   MathJax.typesetClear([element]);
+                                               }
+                                               tryTypeset([element]);
+                                           } else {
+                                               element.innerHTML = fullText.replace(/\n/g, '<br>');
+                                           }
                                            if (callback) callback();
                                        }
                                    }
@@ -829,11 +1033,11 @@
                                         if (data.error) {
                                             addMessage(`⚠️ 错误：${data.error}`, 'assistant');
                                         } else if (data.answer) {
-                                            // ✅ 使用 typeMessage 实现打字机效果
                                             const assistantDiv = document.createElement('div');
                                             assistantDiv.className = 'message assistant';
                                             chatBox.appendChild(assistantDiv);
-                                            typeMessage(assistantDiv, data.answer);
+                                            chatBox.scrollTop = chatBox.scrollHeight;
+                                            typeMessage(assistantDiv, data.answer, true);
                                         } else {
                                             addMessage('抱歉，没有收到有效回答。', 'assistant');
                                         }
@@ -891,9 +1095,10 @@
                                });
                                modeQABtn.addEventListener('click', () => setMode(false));
                                modeGuideBtn.addEventListener('click', () => setMode(true));
+                               capabilityBtn.addEventListener('click', toggleCapabilityPanel);
                     
                                // 初始欢迎语公式渲染
-                               if (window.MathJax) MathJax.typesetPromise();
+                               tryTypeset();
                            </script>
                            </body>
                            </html>

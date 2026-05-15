@@ -20,7 +20,6 @@ public class KgController {
         this.knowledgeGraphService = knowledgeGraphService;
     }
 
-    /** 问答服务优先调用；Feign 友好，避免 404 作为未命中。 */
     @GetMapping("/definition")
     public Map<String, Object> definition(@RequestParam("name") String name) {
         return knowledgeGraphService
@@ -29,7 +28,6 @@ public class KgController {
                 .orElse(Map.of("found", false));
     }
 
-    /** 开题报告示例：GET /kg/search?keyword=xxx */
     @GetMapping("/search")
     public List<KgConceptDto> search(@RequestParam("keyword") String keyword) {
         return knowledgeGraphService.search(keyword);
@@ -44,5 +42,10 @@ public class KgController {
     @GetMapping("/association-markdown")
     public Map<String, String> associationMarkdown(@RequestParam("q") String q) {
         return Map.of("markdown", knowledgeGraphService.buildAssociationMarkdown(q));
+    }
+
+    @GetMapping("/capability-summary")
+    public Map<String, Object> capabilitySummary() {
+        return knowledgeGraphService.capabilitySummary();
     }
 }
